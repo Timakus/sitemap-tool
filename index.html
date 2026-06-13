@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteMap Tool</title>
+<style>
+:root {
+  --bg: #f7f6f3;
+  --surface: #ffffff;
+  --surface2: #f0efe9;
+  --border: #e0ddd5;
+  --border-strong: #c8c4bc;
+  --text: #1a1a18;
+  --text-muted: #6b6860;
+  --text-hint: #9c9990;
+  --accent: #2563a8;
+  --accent-bg: #eff5ff;
+  --danger: #c0392b;
+  --danger-bg: #fdf0ee;
+  --danger-border: #e8a09a;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+.header {
+  background: var(--surface);
+  border-bottom: 0.5px solid var(--border);
+  padding: 0 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 52px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo { font-size: 15px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.logo span { color: var(--accent); }
+.toolbar { display: flex; align-items: center; gap: 6px; flex: 1; }
+.sep { width: 0.5px; height: 20px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+
+/* BUTTONS & INPUTS */
+button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 5px 10px; border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer;
+  white-space: nowrap; font-family: inherit; transition: background 0.1s;
+}
+button:hover { background: var(--surface2); }
+button:active { transform: scale(0.98); }
+button:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.primary:hover { background: #1a4f8f; }
+button.danger-btn { color: var(--danger); border-color: var(--danger-border); }
+button.danger-btn:hover { background: var(--danger-bg); }
+input[type="text"], select {
+  font-family: inherit; font-size: 13px; padding: 5px 9px;
+  border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+  background: var(--surface); color: var(--text);
+}
+input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); }
+select { cursor: pointer; height: 30px; }
+
+/* MAIN */
+.main { display: grid; grid-template-columns: 1fr 240px; flex: 1; min-height: 0; overflow: hidden; }
+
+/* CANVAS AREA */
+.canvas-area { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.view-bar {
+  display: flex; gap: 6px; padding: 8px 1.25rem;
+  background: var(--surface); border-bottom: 0.5px solid var(--border); flex-shrink: 0;
+}
+.toggle-btn {
+  padding: 4px 14px; border-radius: 20px; font-size: 12px;
+  border: 0.5px solid var(--border-strong); background: transparent;
+}
+.toggle-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+.canvas { flex: 1; overflow: auto; padding: 1.25rem; min-height: 0; }
+
+/* SITE TITLE */
+.site-title {
+  font-size: 12px; font-weight: 600; color: var(--text-hint);
+  letter-spacing: 1px; text-transform: uppercase;
+  padding-bottom: 0.6rem; margin-bottom: 1rem;
+  border-bottom: 0.5px solid var(--border);
+}
+.site-title:empty { display: none; }
+
+/* LIST VIEW */
+#listView { display: block; }
+#treeView { display: none; overflow-x: auto; }
+.node-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; cursor: pointer; }
+.node-box {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 12px; border: 0.5px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); font-size: 13px;
+  min-width: 130px; user-select: none; transition: border-color 0.1s, background 0.1s;
+}
+.node-box:hover { border-color: var(--border-strong); background: var(--surface2); }
+.node-box.sel { border: 1.5px solid var(--accent); background: var(--accent-bg); color: var(--accent); }
+.conn-h { display: inline-block; width: 16px; height: 1px; background: var(--border-strong); flex-shrink: 0; }
+.badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 500; flex-shrink: 0; }
+.b-home { background: #e1f5ee; color: #085041; }
+.b-page { background: #e6f1fb; color: #185fa5; }
+.b-blog { background: #faeeda; color: #854f0b; }
+
+/* STATUS BAR */
+.status-bar {
+  padding: 6px 1.25rem; background: var(--surface); border-top: 0.5px solid var(--border);
+  font-size: 12px; color: var(--text-hint); flex-shrink: 0;
+}
+
+/* EDIT PANEL */
+.edit-panel {
+  background: var(--surface); border-left: 0.5px solid var(--border);
+  display: flex; flex-direction: column; overflow-y: auto; min-height: 0;
+}
+.panel-body { padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; flex: 1; }
+.panel-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-hint); }
+.panel-hint { font-size: 12px; color: var(--text-hint); line-height: 1.7; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.field input, .field select { width: 100%; }
+.divider { height: 0.5px; background: var(--border); }
+.action-col { display: flex; flex-direction: column; gap: 6px; }
+.action-col button { width: 100%; }
+.move-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.panel-footer { margin-top: auto; padding-top: 1rem; }
+
+/* FOOTER */
+footer {
+  text-align: center; padding: 8px; font-size: 11px; color: var(--text-hint);
+  background: var(--surface); border-top: 0.5px solid var(--border); flex-shrink: 0;
+}
+
+/* MODAL */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200; align-items: center; justify-content: center; }
+.overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border);
+  padding: 1.5rem; width: 100%; max-width: 420px; margin: 1rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.modal h3 { font-size: 15px; font-weight: 600; }
+.modal p { font-size: 13px; color: var(--text-muted); }
+.modal textarea {
+  width: 100%; height: 200px; padding: 8px; resize: vertical; font-family: monospace;
+  font-size: 12px; border: 0.5px solid var(--border-strong); border-radius: var(--radius);
+  background: var(--surface2); color: var(--text);
+}
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px);
+  background: var(--text); color: #fff; padding: 7px 16px; border-radius: 20px;
+  font-size: 13px; opacity: 0; transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none; z-index: 300; white-space: nowrap;
+}
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* MOBILE */
+@media (max-width: 700px) {
+  .header { height: auto; flex-direction: column; align-items: stretch; padding: 10px 1rem; gap: 8px; position: static; }
+  .toolbar { display: none; }
+  .mob { display: flex; flex-direction: column; gap: 6px; }
+  .mob input { width: 100%; padding: 7px 10px; font-size: 14px; border: 0.5px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+  .mob input:focus { outline: none; border-color: var(--accent); }
+  .mob select { width: 100%; height: 34px; }
+  .mob .r2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .mob .r3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .mob .r2 button, .mob .r3 button { width: 100%; font-size: 12px; padding: 6px 4px; }
+  .main { display: flex; flex-direction: column; overflow: visible; flex: none; }
+  .canvas-area { height: 52vh; flex-shrink: 0; }
+  .canvas { overflow-x: auto; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .edit-panel { border-left: none; border-top: 0.5px solid var(--border); }
+  .toggle-btn { flex: 1; border-radius: var(--radius); padding: 7px 4px; font-size: 13px; }
+}
+@media (min-width: 701px) { .mob { display: none; } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div style="display:flex;align-items:center;gap:1rem;width:100%;">
+    <div class="logo">Site<span>Map</span></div>
+    <div class="toolbar">
+      <input type="text" id="snDesk" placeholder="Enter site name…" style="width:160px;" oninput="onSiteName(this)">
+      <div class="sep"></div>
+      <select id="preDesk" onchange="onPreset(this)">
+        <option value="">Presets…</option>
+        <option value="corporate">Corporate</option>
+        <option value="blog">Blog</option>
+        <option value="ecommerce">E-commerce</option>
+        <option value="portfolio">Portfolio</option>
+      </select>
+      <div class="sep"></div>
+      <button onclick="openImport()">↑ Import MD</button>
+      <button onclick="doExportMD()">↓ Export MD</button>
+      <div class="sep"></div>
+      <button onclick="doExportSVG()">SVG</button>
+      <button onclick="doExportPNG()">PNG</button>
+      <div class="sep"></div>
+      <button class="danger-btn" onclick="doReset()">↺ Reset</button>
+    </div>
+  </div>
+  <div class="mob">
+    <input id="snMob" placeholder="Enter site name…" oninput="onSiteName(this)">
+    <select onchange="onPreset(this)">
+      <option value="">Presets…</option>
+      <option value="corporate">Corporate</option>
+      <option value="blog">Blog</option>
+      <option value="ecommerce">E-commerce</option>
+      <option value="portfolio">Portfolio</option>
+    </select>
+    <div class="r2">
+      <button onclick="openImport()">↑ Import MD</button>
+      <button onclick="doExportMD()">↓ Export MD</button>
+    </div>
+    <div class="r3">
+      <button onclick="doExportSVG()">SVG</button>
+      <button onclick="doExportPNG()">PNG</button>
+      <button class="danger-btn" onclick="doReset()">↺ Reset</button>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="canvas-area">
+    <div class="view-bar">
+      <button class="toggle-btn active" id="btnList" onclick="switchView('list')">List view</button>
+      <button class="toggle-btn" id="btnTree" onclick="switchView('tree')">Tree view</button>
+    </div>
+    <div class="canvas" id="canvas">
+      <div class="site-title" id="siteTitle"></div>
+      <div id="listView"></div>
+      <div id="treeView"><div id="svgWrap"></div></div>
+    </div>
+    <div class="status-bar" id="statusBar">0 pages</div>
+  </div>
+
+  <aside class="edit-panel">
+    <div class="panel-body">
+      <div class="panel-label">Properties</div>
+      <div id="pHint" class="panel-hint">Select a page to edit its properties or add a subpage.</div>
+
+      <div id="pContent" style="display:none;flex-direction:column;gap:0.85rem;">
+        <div class="field">
+          <label>Page name</label>
+          <input type="text" id="pName" placeholder="Page name">
+        </div>
+        <div class="field">
+          <label>Page type</label>
+          <select id="pType">
+            <option value="page">Page</option>
+            <option value="blog">Blog</option>
+          </select>
+        </div>
+        <button class="primary" onclick="applyEdit()">Apply changes</button>
+        <div class="divider"></div>
+        <div class="panel-label">Position</div>
+        <div class="move-row">
+          <button id="btnUp" onclick="moveUp()">↑ Move up</button>
+          <button id="btnDown" onclick="moveDown()">↓ Move down</button>
+        </div>
+        <div class="divider"></div>
+        <div class="panel-label">Actions</div>
+        <div class="action-col">
+          <button onclick="addSubpage()">+ Add subpage</button>
+          <button onclick="addPage()">+ Add page</button>
+          <button class="danger-btn" id="btnDel" onclick="deletePage()">Delete page</button>
+        </div>
+      </div>
+
+      <div id="pEmpty" class="panel-footer">
+        <div class="divider" style="margin-bottom:1rem;"></div>
+        <button style="width:100%;" onclick="addPage()">+ Add page</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  Developed by <a href="https://krismarinov.com">Kris Marinov</a> for <strong>Click2Start</strong>
+</footer>
+
+<div class="overlay" id="modal" onclick="if(event.target===this)closeImport()">
+  <div class="modal">
+    <h3>Import Markdown</h3>
+    <p>Paste a bullet list. Indent with 2 spaces or a tab per level.</p>
+    <textarea id="mdText" placeholder="- Home&#10;  - About&#10;  - Services&#10;    - Web Design&#10;- Contact"></textarea>
+    <div class="modal-btns">
+      <button onclick="closeImport()">Cancel</button>
+      <button class="primary" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────────
+const BADGE = { home:'b-home', page:'b-page', blog:'b-blog' };
+const LABEL = { home:'Home', page:'Page', blog:'Blog' };
+
+const PRESETS = {
+  corporate:[
+    {id:1,label:'Home',type:'home',depth:0},{id:2,label:'About Us',type:'page',depth:0},
+    {id:3,label:'Team',type:'page',depth:1},{id:4,label:'History',type:'page',depth:1},
+    {id:5,label:'Services',type:'page',depth:0},{id:6,label:'Web Design',type:'page',depth:1},
+    {id:7,label:'Branding',type:'page',depth:1},{id:8,label:'SEO',type:'page',depth:1},
+    {id:9,label:'Blog',type:'blog',depth:0},{id:10,label:'Contact',type:'page',depth:0}
+  ],
+  blog:[
+    {id:1,label:'Home',type:'home',depth:0},{id:2,label:'Articles',type:'blog',depth:0},
+    {id:3,label:'Design',type:'page',depth:1},{id:4,label:'Branding',type:'page',depth:1},
+    {id:5,label:'About',type:'page',depth:0},{id:6,label:'Contact',type:'page',depth:0}
+  ],
+  ecommerce:[
+    {id:1,label:'Home',type:'home',depth:0},{id:2,label:'Shop',type:'page',depth:0},
+    {id:3,label:'Category 1',type:'page',depth:1},{id:4,label:'Category 2',type:'page',depth:1},
+    {id:5,label:'Product',type:'page',depth:2},{id:6,label:'Cart',type:'page',depth:0},
+    {id:7,label:'Checkout',type:'page',depth:1},{id:8,label:'About',type:'page',depth:0},
+    {id:9,label:'Contact',type:'page',depth:0}
+  ],
+  portfolio:[
+    {id:1,label:'Home',type:'home',depth:0},{id:2,label:'Work',type:'page',depth:0},
+    {id:3,label:'Web Design',type:'page',depth:1},{id:4,label:'Branding',type:'page',depth:1},
+    {id:5,label:'About',type:'page',depth:0},{id:6,label:'Contact',type:'page',depth:0}
+  ]
+};
+
+const DEFAULT = [
+  {id:1,label:'Home',type:'home',depth:0},{id:2,label:'About',type:'page',depth:0},
+  {id:3,label:'Services',type:'page',depth:0},{id:4,label:'Web Design',type:'page',depth:1},
+  {id:5,label:'Branding',type:'page',depth:1},{id:6,label:'Contact',type:'page',depth:0}
+];
+
+let nodes = DEFAULT.map(n=>({...n}));
+let sel = null;
+let view = 'list';
+let siteName = '';
+let uid = 20;
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+// Returns index of node with given id
+function idx(id) { return nodes.findIndex(n=>n.id===id); }
+
+// Returns [start, end) of the block starting at index i (node + all deeper children)
+function block(i) {
+  const d = nodes[i].depth;
+  let e = i + 1;
+  while (e < nodes.length && nodes[e].depth > d) e++;
+  return [i, e];
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render() {
+  renderList();
+  if (view === 'tree') renderTree();
+  document.getElementById('statusBar').textContent = nodes.length + ' page' + (nodes.length!==1?'s':'');
+}
+
+function renderList() {
+  const c = document.getElementById('listView');
+  c.innerHTML = '';
+  nodes.forEach(n => {
+    const row = document.createElement('div');
+    row.className = 'node-row';
+    row.style.paddingLeft = (n.depth * 28) + 'px';
+    if (n.depth > 0) {
+      const line = document.createElement('span');
+      line.className = 'conn-h';
+      row.appendChild(line);
+    }
+    const box = document.createElement('div');
+    box.className = 'node-box' + (n.id === sel ? ' sel' : '');
+    box.innerHTML = `<span>${n.label}</span><span class="badge ${BADGE[n.type]||'b-page'}">${LABEL[n.type]||'Page'}</span>`;
+    box.onclick = () => { sel = n.id; render(); updatePanel(); };
+    row.appendChild(box);
+    c.appendChild(row);
+  });
+}
+
+function renderTree() {
+  const wrap = document.getElementById('treeView');
+  const W = wrap.clientWidth || 700;
+  const NW=130, NH=34, HG=18, VG=52;
+  const FILL = { home:'#e1f5ee', page:'#e6f1fb', blog:'#faeeda' }
+  const STR  = { home:'#1d9e75', page:'#378add', blog:'#ef9f27' }
+  const TC   = { home:'#085041', page:'#185fa5', blog:'#854f0b' }
+
+  function build(flat) {
+    const roots=[], stack=[];
+    flat.forEach(n=>{
+      const node={...n,children:[]};
+      while(stack.length && stack[stack.length-1].depth >= n.depth) stack.pop();
+      if(!stack.length) roots.push(node); else stack[stack.length-1].children.push(node);
+      stack.push(node);
+    });
+    return roots;
+  }
+  function calcW(node) {
+    if(!node.children.length){node._w=NW;return;}
+    node.children.forEach(calcW);
+    const tot=node.children.reduce((s,c)=>s+c._w,0)+HG*(node.children.length-1);
+    node._w=Math.max(NW,tot);
+  }
+  function pos(node,x,y) {
+    node._x=x+node._w/2-NW/2; node._y=y;
+    if(!node.children.length) return;
+    let cx=x;
+    node.children.forEach(c=>{pos(c,cx,y+NH+VG);cx+=c._w+HG;});
+  }
+  function flat(node,arr=[]){arr.push(node);node.children.forEach(c=>flat(c,arr));return arr;}
+
+  const roots=build(nodes);
+  roots.forEach(r=>calcW(r));
+  const totW=roots.reduce((s,r)=>s+r._w,0)+HG*(roots.length-1);
+  const sx=Math.max(16,(W-totW)/2);
+  const tOff=0;
+  let cx=sx;
+  roots.forEach(r=>{pos(r,cx,16+tOff);cx+=r._w+HG;});
+
+  const all=[];roots.forEach(r=>flat(r,all));
+  const maxY=Math.max(...all.map(n=>n._y))+NH+24;
+  const svgW=Math.max(W,totW+48);
+
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${maxY}" style="display:block;">`;
+  s+=`<rect width="${svgW}" height="${maxY}" fill="#f7f6f3"/>`;
+
+  all.forEach(n=>{
+    if(!n.children||!n.children.length) return;
+    const px=n._x+NW/2, py=n._y+NH, my=py+VG/2;
+    s+=`<line x1="${px}" y1="${py}" x2="${px}" y2="${my}" stroke="#c8c4bc" stroke-width="1"/>`;
+    if(n.children.length>1){
+      s+=`<line x1="${n.children[0]._x+NW/2}" y1="${my}" x2="${n.children[n.children.length-1]._x+NW/2}" y2="${my}" stroke="#c8c4bc" stroke-width="1"/>`;
+    }
+    n.children.forEach(c=>{
+      s+=`<line x1="${c._x+NW/2}" y1="${my}" x2="${c._x+NW/2}" y2="${c._y}" stroke="#c8c4bc" stroke-width="1"/>`;
+    });
+  });
+
+  all.forEach(n=>{
+    const f=FILL[n.type]||'#e6f1fb', st=STR[n.type]||'#378add', tc=TC[n.type]||'#185fa5';
+    const isSel=n.id===sel;
+    s+=`<rect x="${n._x}" y="${n._y}" width="${NW}" height="${NH}" rx="7" fill="${isSel?'#eff5ff':f}" stroke="${isSel?'#2563a8':st}" stroke-width="${isSel?2:0.8}"/>`;
+    const lbl=n.label.length>14?n.label.slice(0,13)+'…':n.label;
+    s+=`<text x="${n._x+NW/2}" y="${n._y+NH/2+5}" text-anchor="middle" font-size="12" font-family="sans-serif" fill="${isSel?'#2563a8':tc}" font-weight="500">${lbl}</text>`;
+  });
+
+  s+='</svg>';
+  // Write into wrapper — single innerHTML assignment, never duplicates
+  document.getElementById('svgWrap').innerHTML = s;
+}
+
+// ── PANEL ─────────────────────────────────────────────────────────────────
+function updatePanel() {
+  const hint    = document.getElementById('pHint');
+  const content = document.getElementById('pContent');
+  const empty   = document.getElementById('pEmpty');
+
+  if (sel === null) {
+    hint.style.display    = 'block';
+    content.style.display = 'none';
+    empty.style.display   = 'block';
+    return;
+  }
+  const n = nodes[idx(sel)];
+  if (!n) { sel=null; updatePanel(); return; }
+
+  hint.style.display    = 'none';
+  content.style.display = 'flex';
+  empty.style.display   = 'none';
+
+  document.getElementById('pName').value = n.label;
+  const pType = document.getElementById('pType');
+  if (n.type === 'home') {
+    pType.innerHTML = '<option value="home">Home</option>';
+    pType.disabled = true;
+  } else {
+    pType.innerHTML = '<option value="page">Page</option><option value="blog">Blog</option>';
+    pType.value = n.type;
+    pType.disabled = false;
+  }
+
+  const i = idx(sel);
+  document.getElementById('btnDel').disabled  = i === 0;
+  document.getElementById('btnUp').disabled   = i === 0;
+  document.getElementById('btnDown').disabled = !hasNextSibling(i);
+}
+
+// Does node at index i have a next sibling at same depth?
+function hasNextSibling(i) {
+  const d = nodes[i].depth;
+  const [,end] = block(i);
+  return end < nodes.length && nodes[end].depth === d;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────
+function applyEdit() {
+  if (sel===null) return;
+  const n = nodes[idx(sel)];
+  if (!n) return;
+  const name = document.getElementById('pName').value.trim();
+  if (!name) { toast('Enter a page name'); return; }
+  n.label = name;
+  if (n.type !== 'home') n.type = document.getElementById('pType').value;
+  render();
+  toast('Changes applied');
+}
+
+function moveUp() {
+  if (sel===null) return;
+  const i = idx(sel);
+  if (i <= 0) return;
+  const d = nodes[i].depth;
+  const [bStart, bEnd] = block(i);
+
+  // Find the start of the previous sibling (same depth) by scanning backwards
+  // from i-1, skipping any nodes that are children of the previous sibling
+  let prevSibEnd = i - 1;
+  // Walk back past children of the previous sibling
+  let prevSibStart = prevSibEnd;
+  while (prevSibStart > 0 && nodes[prevSibStart].depth > d) prevSibStart--;
+  if (nodes[prevSibStart].depth !== d) return; // no previous sibling at same depth
+
+  const curBlock = nodes.splice(bStart, bEnd - bStart);
+  nodes.splice(prevSibStart, 0, ...curBlock);
+  render();
+  updatePanel();
+}
+
+function moveDown() {
+  if (sel===null) return;
+  const i = idx(sel);
+  const d = nodes[i].depth;
+  const [bStart, bEnd] = block(i);
+  if (bEnd >= nodes.length) return;
+  if (nodes[bEnd].depth !== d) return; // next is not a sibling
+
+  const [nextStart, nextEnd] = block(bEnd);
+  const nextBlock = nodes.splice(nextStart, nextEnd - nextStart);
+  nodes.splice(bStart, 0, ...nextBlock);
+  render();
+  updatePanel();
+}
+
+function addPage() {
+  const label = prompt('New page name:', 'New Page');
+  if (!label || !label.trim()) return;
+  const i = sel !== null ? idx(sel) : nodes.length - 1;
+  const d = sel !== null ? nodes[i].depth : 0;
+  const [, end] = sel !== null ? block(i) : [nodes.length, nodes.length];
+  const insertAt = sel !== null ? end : nodes.length;
+  const node = { id: uid++, label: label.trim(), type: 'page', depth: d };
+  nodes.splice(insertAt, 0, node);
+  sel = node.id;
+  render(); updatePanel();
+}
+
+function addSubpage() {
+  if (sel===null) return;
+  const label = prompt('Subpage name:', 'Subpage');
+  if (!label || !label.trim()) return;
+  const i = idx(sel);
+  const [, end] = block(i);
+  const node = { id: uid++, label: label.trim(), type: 'page', depth: nodes[i].depth + 1 };
+  nodes.splice(end, 0, node);
+  sel = node.id;
+  render(); updatePanel();
+}
+
+function deletePage() {
+  if (sel===null) return;
+  const i = idx(sel);
+  if (i === 0) return;
+  const [bStart, bEnd] = block(i);
+  nodes.splice(bStart, bEnd - bStart);
+  sel = null;
+  render(); updatePanel();
+  toast('Page deleted');
+}
+
+// ── SITE NAME ─────────────────────────────────────────────────────────────
+function onSiteName(el) {
+  siteName = el.value;
+  const desk = document.getElementById('snDesk');
+  const mob  = document.getElementById('snMob');
+  if (el !== desk) desk.value = siteName;
+  if (el !== mob)  mob.value  = siteName;
+  document.getElementById('siteTitle').textContent = siteName.trim().toUpperCase();
+  if (view === 'tree') renderTree();
+}
+
+// ── VIEW SWITCH ───────────────────────────────────────────────────────────
+function switchView(v) {
+  view = v;
+  document.getElementById('listView').style.display = v==='list' ? 'block' : 'none';
+  document.getElementById('treeView').style.display = v==='tree' ? 'block' : 'none';
+  document.getElementById('btnList').classList.toggle('active', v==='list');
+  document.getElementById('btnTree').classList.toggle('active', v==='tree');
+  if (v === 'tree') renderTree();
+}
+
+// ── PRESETS ───────────────────────────────────────────────────────────────
+function onPreset(el) {
+  const val = el.value;
+  if (!val) return;
+  if (!confirm('Load preset? Current structure will be replaced.')) { el.value=''; return; }
+  nodes = PRESETS[val].map(n=>({...n}));
+  sel = null; uid = 30;
+  render(); updatePanel();
+  toast('Preset loaded');
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────
+function doReset() {
+  if (!confirm('Reset the entire structure?')) return;
+  nodes = DEFAULT.map(n=>({...n}));
+  sel = null; uid = 20; siteName = '';
+  document.getElementById('snDesk').value = '';
+  document.getElementById('snMob').value  = '';
+  document.getElementById('siteTitle').textContent = '';
+  document.getElementById('preDesk').value = '';
+  document.querySelectorAll('.mob select').forEach(s=>s.value='');
+  render(); updatePanel();
+  toast('Structure reset');
+}
+
+// ── MARKDOWN ──────────────────────────────────────────────────────────────
+function openImport()  { document.getElementById('modal').classList.add('open'); }
+function closeImport() { document.getElementById('modal').classList.remove('open'); }
+
+function doImport() {
+  const raw = document.getElementById('mdText').value.trim();
+  if (!raw) return;
+  const parsed = []; let idC = 50;
+  raw.split('\n').forEach(line => {
+    const indent = line.search(/\S/);
+    if (indent < 0) return;
+    const label = line.replace(/^[\s\-\*#]+/, '').trim();
+    if (!label) return;
+    parsed.push({ id: idC++, label, type: 'page', depth: Math.floor(indent / 2) });
+  });
+  if (!parsed.length) { toast('Could not parse Markdown'); return; }
+  parsed[0].type = 'home';
+  nodes = parsed; sel = null; uid = idC + 1;
+  render(); updatePanel();
+  closeImport();
+  document.getElementById('mdText').value = '';
+  toast('Markdown imported');
+}
+
+function doExportMD() {
+  let md = (siteName ? `# ${siteName}\n\n` : '# Site Structure\n\n');
+  nodes.forEach(n => { md += '  '.repeat(n.depth) + '- ' + n.label + '\n'; });
+  dl(new Blob([md], {type:'text/markdown'}), 'site-structure.md');
+  toast('Markdown exported');
+}
+
+// ── SVG / PNG ─────────────────────────────────────────────────────────────
+function buildListSVG() {
+  const pad=24,rH=36,nW=160,iW=28;
+  const F={home:'#e1f5ee', page:'#e6f1fb', blog:'#faeeda'}
+  const S={home:'#1d9e75', page:'#378add', blog:'#ef9f27'}
+  const T={home:'#085041', page:'#185fa5', blog:'#854f0b'}
+  const tH=siteName.trim()?36:0;
+  const h=pad*2+nodes.length*rH+tH, w=640;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" font-family="sans-serif">`;
+  s+=`<rect width="${w}" height="${h}" fill="#fff"/>`;
+  if(siteName.trim()){
+    s+=`<text x="${pad}" y="22" font-size="11" font-weight="600" fill="#9c9990" letter-spacing="1">${siteName.trim().toUpperCase()}</text>`;
+    s+=`<line x1="${pad}" y1="28" x2="${w-pad}" y2="28" stroke="#e0ddd5" stroke-width="0.5"/>`;
+  }
+  nodes.forEach((n,i)=>{
+    const x=pad+n.depth*iW, y=pad+tH+i*rH;
+    if(n.depth>0) s+=`<line x1="${x-10}" y1="${y+rH/2}" x2="${x}" y2="${y+rH/2}" stroke="#c8c4bc" stroke-width="1"/>`;
+    const f=F[n.type]||'#e6f1fb',st=S[n.type]||'#378add',tc=T[n.type]||'#185fa5';
+    s+=`<rect x="${x}" y="${y+4}" width="${nW}" height="${rH-8}" rx="6" fill="${f}" stroke="${st}" stroke-width="0.8"/>`;
+    s+=`<text x="${x+10}" y="${y+rH/2+5}" font-size="12" fill="${tc}" font-weight="500">${n.label}</text>`;
+  });
+  return s+'</svg>';
+}
+
+function getSVG() {
+  if (view==='tree') {
+    const el=document.querySelector('#svgWrap svg');
+    return el ? el.outerHTML : buildListSVG();
+  }
+  return buildListSVG();
+}
+
+function doExportSVG() {
+  dl(new Blob([getSVG()],{type:'image/svg+xml'}), 'site-structure.svg');
+  toast('SVG exported');
+}
+
+function doExportPNG() {
+  const svgStr=getSVG();
+  const img=new Image();
+  img.onload=()=>{
+    const c=document.createElement('canvas');
+    c.width=img.width*2; c.height=img.height*2;
+    const ctx=c.getContext('2d');
+    ctx.scale(2,2); ctx.fillStyle='#fff'; ctx.fillRect(0,0,img.width,img.height);
+    ctx.drawImage(img,0,0);
+    dl(c.toDataURL('image/png'), 'site-structure.png', true);
+    toast('PNG exported');
+  };
+  img.src=URL.createObjectURL(new Blob([svgStr],{type:'image/svg+xml'}));
+}
+
+function dl(data, name, isDataURL=false) {
+  const a=document.createElement('a');
+  a.href=isDataURL?data:URL.createObjectURL(data);
+  a.download=name; a.click();
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('on');
+  setTimeout(()=>el.classList.remove('on'),2200);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+render();
+updatePanel();
+</script>
+</body>
+</html>
